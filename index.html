@@ -1,1 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Card Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-serif-title {
+      font-family: 'Playfair Display', Georgia, serif;
+    }
+    .underline-input {
+      border: none;
+      border-bottom: 1px solid #d1d5db;
+      border-radius: 0;
+      padding: 10px 0;
+      background: transparent;
+      width: 100%;
+      font-size: 15px;
+      color: #111827;
+      transition: border-color 0.2s ease;
+    }
+    .underline-input:focus {
+      outline: none;
+      border-bottom: 2px solid #1da1f2;
+    }
+    .underline-input::placeholder {
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body class="bg-white text-gray-900 min-h-screen">
+
+  <!-- ==================== 1. CLEAN LOGIN SCREEN ONLY ==================== -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center bg-white px-4">
+    <div class="w-full max-w-[360px] py-10">
+      <h1 class="font-serif-title text-[34px] text-center text-[#333333] mb-10 tracking-tight">Log In</h1>
+
+      <form id="login-form" onsubmit="handleLogin(event)" class="space-y-6">
+        <div>
+          <label for="login-username" class="block text-[11px] text-gray-400 mb-0.5">Username</label>
+          <input
+            id="login-username"
+            type="text"
+            autocomplete="username"
+            required
+            class="underline-input"
+          />
+        </div>
+
+        <div>
+          <input
+            id="login-password"
+            type="password"
+            placeholder="Password"
+            autocomplete="current-password"
+            required
+            class="underline-input"
+          />
+        </div>
+
+        <p id="login-error" class="hidden text-xs text-red-500 text-center pt-1">
+          Invalid username or password.
+        </p>
+
+        <div class="pt-4">
+          <button
+            type="submit"
+            class="w-full bg-[#19a9f5] hover:bg-[#1396dc] active:bg-[#0f85c4] text-white font-semibold text-xs tracking-widest uppercase py-3.5 rounded-[3px] transition shadow-sm cursor-pointer"
+          >
+            LOGIN
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 2. DASHBOARD (SHOWN ONLY AFTER LOGIN) ==================== -->
+  <div id="app-dashboard" class="hidden min-h-screen bg-[#f8f9fa]">
+    <!-- Top Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-20">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+        <!-- Brand -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="showDashboardHome()" class="text-base font-semibold tracking-tight text-gray-900 hover:text-[#007aff] transition cursor-pointer">
+            Payment Methods
+          </button>
+        </div>
+
+        <!-- Right Controls: User Balance ($), Top Up Button, Profile -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div class="flex items-center bg-emerald-50 border border-emerald-200 rounded-full pl-3 pr-1.5 py-1 gap-2">
+            <div class="leading-tight">
+              <span class="hidden sm:inline text-[10px] uppercase tracking-wider font-semibold text-emerald-700 mr-1">User Balance</span>
+              <span id="header-total-balance" class="text-xs sm:text-sm font-bold text-emerald-700">$0.00</span>
+            </div>
+            <button
+              type="button"
+              onclick="openTopupView(null)"
+              class="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold px-2.5 py-1 rounded-full transition shadow-2xs cursor-pointer"
+            >
+              <span>+ Top Up</span>
+            </button>
+          </div>
+
+          <!-- Profile Icon with Username -->
+          <div class="relative">
+            <button
+              id="profile-btn"
+              type="button"
+              onclick="toggleProfileMenu()"
+              class="flex items-center gap-2 py-1 px-2 rounded-full hover:bg-gray-100 transition cursor-pointer"
+            >
+              <span id="header-username" class="hidden md:inline text-sm font-medium text-gray-800"></span>
+              <div
+                id="header-avatar"
+                class="w-8 h-8 rounded-full bg-[#007aff] text-white text-xs font-semibold flex items-center justify-center uppercase"
+              ></div>
+            </button>
+
+            <div
+              id="profile-dropdown"
+              class="hidden absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 z-30"
+            >
+              <div class="px-4 py-2 border-b border-gray-100">
+                <p class="text-[11px] text-gray-400">Signed in as</p>
+                <p id="dropdown-username" class="text-sm font-semibold text-gray-800 truncate"></p>
+              </div>
+              <button
+                type="button"
+                onclick="handleLogout()"
+                class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition cursor-pointer"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Toast Notification -->
+    <div id="toast-banner" class="hidden fixed bottom-5 right-5 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-lg"></div>
+
+    <!-- ==================== VIEW A: MAIN CARDS LIST + DEPOSIT LOG ==================== -->
+    <main id="cards-list-view" class="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <!-- Cards Section -->
+      <div>
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Cards</h2>
+            <p class="text-xs text-gray-500 mt-0.5">Click a card to view details, billing info, or Top Up via Crypto &amp; Other Payments</p>
+          </div>
+          <button
+            type="button"
+            onclick="openAddCardView()"
+            class="inline-flex items-center gap-1.5 text-sm font-medium text-[#007aff] hover:text-[#005ec4] cursor-pointer shrink-0"
+          >
+            <span class="text-lg leading-none">+</span> Add Visa Card
+          </button>
+        </div>
+
+        <div id="cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Cards rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Deposit / Top-Up Log Section -->
+      <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xs">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-semibold text-gray-900">Deposit / Top-Up Log</h3>
+            <p class="text-xs text-gray-500 mt-0.5">User balance deposit and top-up history</p>
+          </div>
+          <span id="log-count-badge" class="text-[11px] font-medium bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full">0 records</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-gray-100 text-[11px] font-semibold uppercase tracking-wider text-gray-400 bg-gray-50/70">
+                <th class="py-3 px-5">Date &amp; Time</th>
+                <th class="py-3 px-4">Type / Method</th>
+                <th class="py-3 px-4">Reference / Note</th>
+                <th class="py-3 px-4 text-right">Amount</th>
+                <th class="py-3 px-5 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody id="deposit-log-tbody" class="divide-y divide-gray-100 text-xs text-gray-700">
+              <!-- Log rows rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <!-- ==================== VIEW B: CARD DETAILS & TOP UP (CRYPTO & OTHER PAYMENT) ==================== -->
+    <section id="card-topup-view" class="hidden max-w-2xl mx-auto px-4 sm:px-6 py-6">
+      <div class="flex items-center justify-between mb-5">
+        <button
+          type="button"
+          onclick="showDashboardHome()"
+          class="inline-flex items-center gap-1 text-[#007aff] text-sm font-medium hover:opacity-75 cursor-pointer"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Cards
+        </button>
+
+        <button
+          id="edit-card-trigger-btn"
+          type="button"
+          onclick="openEditSelectedCard()"
+          class="text-xs font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-2xs cursor-pointer"
+        >
+          Edit Card &amp; Billing Info
+        </button>
+      </div>
+
+      <!-- Visual VCC Card Showcase (Exact Card Visual + Synced User Balance) -->
+      <div id="selected-card-visual-wrapper" class="mb-5"></div>
+
+      <!-- Additional Card Information Box -->
+      <div id="additional-card-info-box" class="hidden bg-white border border-gray-200 rounded-2xl p-5 mb-5 shadow-2xs">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Additional Card Information</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2.5 gap-x-6 text-xs">
+          <div class="flex justify-between sm:block">
+            <span class="text-gray-400 block">Country/Region</span>
+            <span id="info-country" class="font-medium text-gray-900">—</span>
+          </div>
+          <div class="flex justify-between sm:block">
+            <span class="text-gray-400 block">Street Address</span>
+            <span id="info-street" class="font-medium text-gray-900">—</span>
+          </div>
+          <div class="flex justify-between sm:block">
+            <span class="text-gray-400 block">City</span>
+            <span id="info-city" class="font-medium text-gray-900">—</span>
+          </div>
+          <div class="flex justify-between sm:block">
+            <span class="text-gray-400 block">State / Postal Code</span>
+            <span id="info-state-zip" class="font-medium text-gray-900">—</span>
+          </div>
+          <div class="flex justify-between sm:block">
+            <span class="text-gray-400 block">Creation Time</span>
+            <span id="info-created" class="font-mono font-medium text-gray-900">—</span>
+          </div>
+          <div class="flex justify-between sm:block">
+            <span class="text-gray-400 block">Notes</span>
+            <span id="info-notes" class="font-medium text-gray-900">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Up Container -->
+      <div class="bg-white border border-gray-200 rounded-2xl shadow-2xs overflow-hidden">
+        <div class="p-5 border-b border-gray-100">
+          <h2 class="text-base font-semibold text-gray-900">Top Up User &amp; Card Balance (USD)</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Select amount and payment method to credit your synced balance</p>
+
+          <!-- Amount Input + Quick Pills -->
+          <div class="mt-4">
+            <label for="topup-amount" class="block text-xs font-medium text-gray-600 mb-1.5">Amount (USD)</label>
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-base">$</span>
+              <input
+                id="topup-amount"
+                type="number"
+                min="1"
+                step="0.01"
+                value="50.00"
+                class="w-full pl-8 pr-4 py-2.5 text-lg font-bold text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:border-[#007aff]"
+              />
+            </div>
+
+            <div class="grid grid-cols-4 gap-2 mt-2.5">
+              <button type="button" onclick="setTopupAmount(10)" class="py-1.5 text-xs font-semibold rounded-lg border border-gray-200 hover:border-[#007aff] hover:text-[#007aff] transition cursor-pointer">+$10</button>
+              <button type="button" onclick="setTopupAmount(50)" class="py-1.5 text-xs font-semibold rounded-lg border border-gray-200 hover:border-[#007aff] hover:text-[#007aff] transition cursor-pointer">+$50</button>
+              <button type="button" onclick="setTopupAmount(100)" class="py-1.5 text-xs font-semibold rounded-lg border border-gray-200 hover:border-[#007aff] hover:text-[#007aff] transition cursor-pointer">+$100</button>
+              <button type="button" onclick="setTopupAmount(250)" class="py-1.5 text-xs font-semibold rounded-lg border border-gray-200 hover:border-[#007aff] hover:text-[#007aff] transition cursor-pointer">+$250</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Method Tabs: Crypto vs Other Payment -->
+        <div class="grid grid-cols-2 border-b border-gray-200 bg-gray-50">
+          <button
+            id="tab-crypto-btn"
+            type="button"
+            onclick="switchTopupTab('crypto')"
+            class="py-3 text-xs sm:text-sm font-semibold text-[#007aff] border-b-2 border-[#007aff] bg-white transition cursor-pointer"
+          >
+            Crypto Payment
+          </button>
+          <button
+            id="tab-other-btn"
+            type="button"
+            onclick="switchTopupTab('other')"
+            class="py-3 text-xs sm:text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-800 transition cursor-pointer"
+          >
+            Other Payment
+          </button>
+        </div>
+
+        <!-- TAB 1: CRYPTO PAYMENT -->
+        <div id="panel-crypto" class="p-5 space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-2">Select Cryptocurrency &amp; Network</label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button type="button" onclick="selectCryptoNetwork('USDT_TRC20', this)" class="crypto-net-btn border-2 border-[#007aff] bg-blue-50/50 text-blue-900 rounded-xl p-2.5 text-left cursor-pointer">
+                <div class="text-xs font-bold">USDT</div>
+                <div class="text-[10px] text-blue-700">TRC20</div>
+              </button>
+              <button type="button" onclick="selectCryptoNetwork('USDT_ERC20', this)" class="crypto-net-btn border border-gray-200 hover:border-gray-300 rounded-xl p-2.5 text-left cursor-pointer">
+                <div class="text-xs font-bold text-gray-800">USDT</div>
+                <div class="text-[10px] text-gray-500">ERC20</div>
+              </button>
+              <button type="button" onclick="selectCryptoNetwork('BTC', this)" class="crypto-net-btn border border-gray-200 hover:border-gray-300 rounded-xl p-2.5 text-left cursor-pointer">
+                <div class="text-xs font-bold text-gray-800">Bitcoin</div>
+                <div class="text-[10px] text-gray-500">BTC Network</div>
+              </button>
+              <button type="button" onclick="selectCryptoNetwork('ETH', this)" class="crypto-net-btn border border-gray-200 hover:border-gray-300 rounded-xl p-2.5 text-left cursor-pointer">
+                <div class="text-xs font-bold text-gray-800">Ethereum</div>
+                <div class="text-[10px] text-gray-500">ERC20</div>
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4">
+            <div class="w-24 h-24 bg-white border border-gray-200 rounded-lg p-2 shrink-0 flex items-center justify-center">
+              <svg viewBox="0 0 100 100" class="w-full h-full text-gray-900" fill="currentColor">
+                <rect x="8" y="8" width="26" height="26" fill="none" stroke="currentColor" stroke-width="6"/>
+                <rect x="15" y="15" width="12" height="12"/>
+                <rect x="66" y="8" width="26" height="26" fill="none" stroke="currentColor" stroke-width="6"/>
+                <rect x="73" y="15" width="12" height="12"/>
+                <rect x="8" y="66" width="26" height="26" fill="none" stroke="currentColor" stroke-width="6"/>
+                <rect x="15" y="73" width="12" height="12"/>
+                <rect x="44" y="12" width="8" height="8"/>
+                <rect x="44" y="28" width="12" height="8"/>
+                <rect x="12" y="44" width="12" height="8"/>
+                <rect x="32" y="44" width="8" height="16"/>
+                <rect x="48" y="48" width="12" height="12"/>
+                <rect x="68" y="44" width="8" height="12"/>
+                <rect x="82" y="48" width="10" height="8"/>
+                <rect x="44" y="68" width="8" height="10"/>
+                <rect x="60" y="66" width="12" height="8"/>
+                <rect x="78" y="72" width="14" height="14"/>
+                <rect x="46" y="84" width="16" height="8"/>
+              </svg>
+            </div>
+
+            <div class="w-full min-w-0">
+              <div class="flex items-center justify-between">
+                <span id="crypto-address-label" class="text-[11px] font-semibold uppercase tracking-wider text-gray-500">USDT (TRC20) Deposit Address</span>
+                <span class="text-[11px] font-medium text-emerald-600">1 USD = 1.00 USDT</span>
+              </div>
+              <div class="mt-1.5 flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                <code id="crypto-wallet-address" class="text-xs font-mono text-gray-800 truncate select-all w-full">TX9k8vP3mQ7rW2nL5jH4cB6zF1yD8eA9sK</code>
+                <button
+                  type="button"
+                  onclick="copyCryptoAddress()"
+                  class="text-xs font-semibold text-[#007aff] hover:text-[#005ec4] shrink-0 cursor-pointer"
+                >
+                  Copy
+                </button>
+              </div>
+              <p class="text-[11px] text-gray-400 mt-1.5">Send exact USD equivalent, then click confirm below to credit balance.</p>
+            </div>
+          </div>
+
+          <div>
+            <label for="crypto-txid" class="block text-xs font-medium text-gray-600 mb-1">Transaction Hash / TXID (Optional)</label>
+            <input
+              id="crypto-txid"
+              type="text"
+              placeholder="Paste transaction hash for log reference"
+              class="w-full px-3.5 py-2 text-xs font-mono border border-gray-300 rounded-xl focus:outline-none focus:border-[#007aff]"
+            />
+          </div>
+
+          <button
+            type="button"
+            onclick="confirmTopup('Crypto')"
+            class="w-full bg-[#007aff] hover:bg-[#0063d1] text-white font-semibold text-sm py-3 rounded-xl transition shadow-2xs cursor-pointer"
+          >
+            Confirm Crypto Top Up
+          </button>
+        </div>
+
+        <!-- TAB 2: OTHER PAYMENT -->
+        <div id="panel-other" class="hidden p-5 space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-2">Choose Payment Channel</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button type="button" onclick="selectOtherMethod('Bank Transfer', this)" class="other-pay-btn border-2 border-[#007aff] bg-blue-50/50 rounded-xl p-3 text-left cursor-pointer">
+                <div class="text-xs font-bold text-gray-900">Local Bank Transfer</div>
+                <div class="text-[11px] text-gray-500 mt-0.5">KBZ / AYA / CB Instant Deposit</div>
+              </button>
+              <button type="button" onclick="selectOtherMethod('KBZPay / WavePay', this)" class="other-pay-btn border border-gray-200 hover:border-gray-300 rounded-xl p-3 text-left cursor-pointer">
+                <div class="text-xs font-bold text-gray-900">KBZPay / WavePay</div>
+                <div class="text-[11px] text-gray-500 mt-0.5">Mobile Wallet QR Top Up</div>
+              </button>
+              <button type="button" onclick="selectOtherMethod('International Wire (SWIFT)', this)" class="other-pay-btn border border-gray-200 hover:border-gray-300 rounded-xl p-3 text-left cursor-pointer">
+                <div class="text-xs font-bold text-gray-900">International Wire (SWIFT)</div>
+                <div class="text-[11px] text-gray-500 mt-0.5">USD Settlement Account</div>
+              </button>
+              <button type="button" onclick="selectOtherMethod('PayPal / Wise Transfer', this)" class="other-pay-btn border border-gray-200 hover:border-gray-300 rounded-xl p-3 text-left cursor-pointer">
+                <div class="text-xs font-bold text-gray-900">PayPal / Wise Transfer</div>
+                <div class="text-[11px] text-gray-500 mt-0.5">Instant USD Balance Credit</div>
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-xs space-y-1">
+            <div class="flex justify-between">
+              <span class="text-gray-500">Selected Method:</span>
+              <span id="other-selected-label" class="font-semibold text-gray-900">Bank Transfer</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500">Settlement Currency:</span>
+              <span class="font-semibold text-emerald-700">USD ($)</span>
+            </div>
+          </div>
+
+          <div>
+            <label for="other-ref" class="block text-xs font-medium text-gray-600 mb-1">Payment Reference / Receipt Note (Optional)</label>
+            <input
+              id="other-ref"
+              type="text"
+              placeholder="e.g. Receipt #482910"
+              class="w-full px-3.5 py-2 text-xs border border-gray-300 rounded-xl focus:outline-none focus:border-[#007aff]"
+            />
+          </div>
+
+          <button
+            type="button"
+            onclick="confirmTopup('Other')"
+            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm py-3 rounded-xl transition shadow-2xs cursor-pointer"
+          >
+            Confirm Other Payment Top Up
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW C: ADD / EDIT VISA CARD & ADDITIONAL INFO ==================== -->
+    <section id="card-detail-view" class="hidden max-w-lg mx-auto bg-white min-h-[calc(100vh-4rem)] border-x border-gray-100 pb-10">
+      <div class="flex items-center justify-between px-4 h-12 border-b border-gray-100">
+        <button
+          type="button"
+          onclick="showDashboardHome()"
+          class="inline-flex items-center gap-1 text-[#007aff] text-[15px] font-normal hover:opacity-75 cursor-pointer"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
+        <button
+          id="save-card-btn"
+          type="button"
+          onclick="saveCardForm()"
+          class="text-[#007aff] text-[15px] font-medium hover:opacity-75 cursor-pointer"
+        >
+          Save
+        </button>
+      </div>
+
+      <div class="pt-6 pb-4 px-6 text-center">
+        <h1 id="detail-title" class="text-[24px] font-normal text-gray-900 tracking-tight">Card Details</h1>
+        <p id="detail-subtitle" class="text-[12px] text-gray-500 mt-1">
+          Card details and billing address information
+        </p>
+      </div>
+
+      <form id="card-form" onsubmit="event.preventDefault(); saveCardForm();" class="border-y border-gray-200 divide-y divide-gray-200 bg-white">
+        <input type="hidden" id="edit-card-id" value="" />
+
+        <div class="flex items-center px-4 py-3">
+          <label for="card-label" class="w-36 text-xs font-medium text-gray-700 shrink-0">Card Label</label>
+          <input id="card-label" type="text" placeholder="Vcc Card" class="w-full text-sm text-gray-900 placeholder-gray-300 focus:outline-none" />
+        </div>
+
+        <div class="flex items-center px-4 py-3">
+          <label for="card-name" class="w-36 text-xs font-medium text-gray-700 shrink-0">Name</label>
+          <input id="card-name" type="text" placeholder="Required" class="w-full text-sm text-gray-900 placeholder-gray-300 focus:outline-none" />
+        </div>
+
+        <div class="flex items-center px-4 py-3">
+          <label for="card-number" class="w-36 text-xs font-medium text-gray-700 shrink-0">Card Number</label>
+          <input
+            id="card-number"
+            type="text"
+            inputmode="numeric"
+            maxlength="19"
+            placeholder="4910 9000 0000 0000"
+            oninput="handleCardNumberInput(this)"
+            class="w-full text-sm text-gray-900 placeholder-gray-300 focus:outline-none font-mono"
+          />
+        </div>
+
+        <div class="flex items-center px-4 py-3">
+          <label for="card-expiry" class="w-36 text-xs font-medium text-gray-700 shrink-0">Valid Thru</label>
+          <input
+            id="card-expiry"
+            type="text"
+            inputmode="numeric"
+            maxlength="5"
+            placeholder="MM/YY"
+            oninput="handleExpiryInput(this)"
+            class="w-full text-sm text-gray-900 placeholder-gray-300 focus:outline-none"
+          />
+        </div>
+
+        <div class="flex items-center px-4 py-3">
+          <label for="card-cvc" class="w-36 text-xs font-medium text-gray-700 shrink-0">CVV</label>
+          <input id="card-cvc" type="text" inputmode="numeric" maxlength="4" placeholder="Required" class="w-full text-sm text-gray-900 placeholder-gray-300 focus:outline-none" />
+        </div>
+
+        <div class="flex items-center px-4 py-3 bg-emerald-50/40">
+          <label for="card-balance" class="w-36 text-xs font-medium text-gray-700 shrink-0">Synced Balance ($)</label>
+          <input id="card-balance" type="number" step="0.01" min="0" placeholder="0.00" class="w-full text-sm font-semibold text-emerald-700 placeholder-gray-300 focus:outline-none" />
+        </div>
+
+        <!-- Additional Card Information Fields -->
+        <div class="bg-gray-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+          Additional Card Information
+        </div>
+
+        <div class="flex items-center px-4 py-3">
+          <label for="card-country" class="w-36 text-xs font-medium text-gray-700 shrink-0">Country/Region</label>
+          <input id="card-country" type="text" placeholder="United States" class="w-full text-sm text-gray-900 placeholder-gray-300 focus:outline-none" />
+        </div>
+
+        <div class="flex items-center px-4 py-3">
+          <label for="card-street" class="w-36 text-xs font-medium text-gray-700 shrink-0">Street Address</label>
+          <input id="card-street" type="text" placeholder="2381 Zanker Rd Ste 110" class="w-full text-sm text-gray-900 placeholder-gray-300 focus:outline-none" />
+        </div>
+
+        <div class="flex items-center px-4 py-3">
+          <label for="card-city" class="w-36 text-xs font-medium text-gray-700 shrink-0">City</label>
+          <input id="card-city" type="text" placeholder="San Jose" class="w-full text-sm text-gray-900 placeholder-gray-300 focus:outline-none" />
+        </div>
+
+        <div class="flex items-center px-4 py-3">
+          <label for="card-state" class="w-36 text-xs font-medium text-gray-700 shrink-0">State</label>
+          <input id="card-state" type="text" placeholder="CA" class="w-full text-sm text-gray-900 placeholder-gray-300 focus:outline-none" />
+        </div>
+
+        <div class="flex items-center px-4 py-3">
+          <label for="card-zip" class="w-36 text-xs font-medium text-gray-700 shrink-0">Postal Code</label>
+          <input id="card-zip" type="text" placeholder="95131" class="w-full text-sm text-gray-900 placeholder-gray-300 focus:outline-none" />
+        </div>
+
+        <div class="flex items-center px-4 py-3">
+          <label for="card-notes" class="w-36 text-xs font-medium text-gray-700 shrink-0">Notes</label>
+          <input id="card-notes" type="text" placeholder="Optional" class="w-full text-sm text-gray-900 placeholder-gray-300 focus:outline-none" />
+        </div>
+
+        <div class="flex items-center px-4 py-3">
+          <label for="card-created" class="w-36 text-xs font-medium text-gray-700 shrink-0">Creation Time</label>
+          <input id="card-created" type="text" placeholder="YYYY-MM-DD HH:MM:SS" class="w-full text-sm font-mono text-gray-900 placeholder-gray-300 focus:outline-none" />
+        </div>
+      </form>
+
+      <p id="form-error" class="hidden text-xs text-red-500 text-center mt-3 px-4"></p>
+
+      <div id="delete-card-wrapper" class="hidden px-4 mt-6">
+        <button
+          type="button"
+          onclick="deleteCurrentCard()"
+          class="w-full py-2.5 text-center text-sm font-medium text-red-600 bg-white border border-gray-200 rounded-xl hover:bg-red-50 transition cursor-pointer"
+        >
+          Remove Card
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const USERS = {
+      hzo224: "asdf@1234",
+      yya234: "asdf@1234"
+    };
+
+    const CRYPTO_NETWORKS = {
+      USDT_TRC20: { label: "USDT (TRC20) Deposit Address", address: "TX9k8vP3mQ7rW2nL5jH4cB6zF1yD8eA9sK" },
+      USDT_ERC20: { label: "USDT (ERC20) Deposit Address", address: "0x71C9482a9E3B510F8d4A6C12e90B34F8c91D204E" },
+      BTC: { label: "Bitcoin (BTC) Deposit Address", address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh" },
+      ETH: { label: "Ethereum (ETH) Deposit Address", address: "0x71C9482a9E3B510F8d4A6C12e90B34F8c91D204E" }
+    };
+
+    function getTodayTimestamp() {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    }
+
+    function createInitialAccountData() {
+      const todayStamp = getTodayTimestamp();
+      return {
+        hzo224: {
+          userBalance: 9.86,
+          cards: [
+            {
+              id: "card_hzo_1",
+              label: "Vcc Card",
+              name: "Edgar Hettinger",
+              fullNumber: "4910 9000 4379 9875",
+              last4: "9875",
+              expiry: "02/28",
+              cvc: "474",
+              country: "United States",
+              street: "2381 Zanker Rd Ste 110",
+              city: "San Jose",
+              state: "CA",
+              zip: "95131",
+              notes: "",
+              creationTime: "2025-02-15 22:42:53"
+            }
+          ],
+          logs: [
+            {
+              id: "log_1",
+              timestamp: todayStamp,
+              method: "Deposit Top-Up",
+              reference: "User Balance Credit ($9.86)",
+              amount: 9.86,
+              status: "Completed"
+            }
+          ]
+        },
+        yya234: {
+          userBalance: 0.00,
+          cards: [],
+          logs: []
+        }
+      };
+    }
+
+    let accountStore = createInitialAccountData();
+    let currentUser = null;
+    let activeTopupCardId = null;
+    let activeTopupTab = "crypto";
+    let selectedCryptoKey = "USDT_TRC20";
+    let selectedOtherMethod = "Bank Transfer";
+
+    function getActiveAccount() {
+      return currentUser ? accountStore[currentUser] : null;
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast-banner");
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.classList.remove("hidden");
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toast.classList.add("hidden");
+      }, 2800);
+    }
+
+    function formatUSD(amount) {
+      const num = parseFloat(amount) || 0;
+      return "$" + num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatCardUsdLabel(amount) {
+      const num = parseFloat(amount) || 0;
+      return `${num.toFixed(2)} USD`;
+    }
+
+    function updateHeaderBalance() {
+      const acc = getActiveAccount();
+      const bal = acc ? acc.userBalance : 0;
+      const el = document.getElementById("header-total-balance");
+      if (el) el.textContent = formatUSD(bal);
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById("login-username").value.trim();
+      const password = document.getElementById("login-password").value;
+      const errorEl = document.getElementById("login-error");
+
+      if (USERS[username] && USERS[username] === password) {
+        currentUser = username;
+        errorEl.classList.add("hidden");
+        document.getElementById("login-form").reset();
+
+        document.getElementById("header-username").textContent = currentUser;
+        document.getElementById("dropdown-username").textContent = currentUser;
+        document.getElementById("header-avatar").textContent = currentUser.slice(0, 2).toUpperCase();
+
+        document.getElementById("login-screen").classList.add("hidden");
+        document.getElementById("app-dashboard").classList.remove("hidden");
+        showDashboardHome();
+      } else {
+        errorEl.classList.remove("hidden");
+      }
+    }
+
+    function toggleProfileMenu() {
+      document.getElementById("profile-dropdown").classList.toggle("hidden");
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      activeTopupCardId = null;
+      accountStore = createInitialAccountData();
+      document.getElementById("profile-dropdown").classList.add("hidden");
+      document.getElementById("app-dashboard").classList.add("hidden");
+      document.getElementById("login-screen").classList.remove("hidden");
+    }
+
+    document.addEventListener("click", (e) => {
+      const btn = document.getElementById("profile-btn");
+      const menu = document.getElementById("profile-dropdown");
+      if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.add("hidden");
+      }
+    });
+
+    function showDashboardHome() {
+      document.getElementById("card-topup-view").classList.add("hidden");
+      document.getElementById("card-detail-view").classList.add("hidden");
+      document.getElementById("cards-list-view").classList.remove("hidden");
+      updateHeaderBalance();
+      renderCards();
+      renderDepositLogs();
+    }
+
+    function renderVccCardMarkup(card, syncedBalance, interactive = true) {
+      return `
+        <div ${interactive ? `onclick="openTopupView('${card.id}')"` : ""} class="bg-white border border-gray-300 rounded-2xl p-6 shadow-2xs ${interactive ? "hover:border-[#007aff] hover:shadow-md transition cursor-pointer" : ""} flex flex-col justify-between">
+          <div>
+            <p class="text-xl sm:text-[22px] font-semibold tracking-wider text-gray-900 font-mono">
+              ${card.fullNumber}
+            </p>
+            <p class="text-sm text-gray-500 mt-1 pb-3 border-b border-gray-200">
+              ${card.label || "Vcc Card"}
+            </p>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 pt-3.5 text-left">
+            <div>
+              <p class="text-xs sm:text-sm font-semibold text-gray-900 truncate">${card.name}</p>
+              <p class="text-[11px] text-gray-400 mt-0.5">Name</p>
+            </div>
+            <div>
+              <p class="text-xs sm:text-sm font-semibold text-gray-900">${card.expiry}</p>
+              <p class="text-[11px] text-gray-400 uppercase leading-tight mt-0.5">VALID<br/>THRU</p>
+            </div>
+            <div>
+              <p class="text-xs sm:text-sm font-semibold text-gray-900">${card.cvc}</p>
+              <p class="text-[11px] text-gray-400 uppercase mt-0.5">CVV</p>
+            </div>
+          </div>
+
+          <div class="flex items-end justify-between mt-5 pt-1">
+            <span class="text-base font-semibold text-[#2e7d32]">${formatCardUsdLabel(syncedBalance)}</span>
+            <span class="text-xl font-bold tracking-tight text-[#1a3c8b]">VISA</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCards() {
+      const acc = getActiveAccount();
+      const container = document.getElementById("cards-container");
+      container.innerHTML = "";
+
+      acc.cards.forEach((card) => {
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = renderVccCardMarkup(card, acc.userBalance, true);
+        container.appendChild(wrapper.firstElementChild);
+      });
+
+      const addSlot = document.createElement("button");
+      addSlot.type = "button";
+      addSlot.onclick = openAddCardView;
+      addSlot.className =
+        "border-2 border-dashed border-gray-300 hover:border-[#007aff] rounded-2xl p-6 min-h-[195px] flex flex-col items-center justify-center text-[#007aff] hover:bg-blue-50/40 transition cursor-pointer";
+      addSlot.innerHTML = `
+        <span class="text-2xl font-light mb-1">+</span>
+        <span class="text-sm font-medium">Add payment method</span>
+      `;
+      container.appendChild(addSlot);
+    }
+
+    function renderDepositLogs() {
+      const acc = getActiveAccount();
+      const tbody = document.getElementById("deposit-log-tbody");
+      const badge = document.getElementById("log-count-badge");
+      tbody.innerHTML = "";
+      badge.textContent = `${acc.logs.length} record${acc.logs.length === 1 ? "" : "s"}`;
+
+      if (acc.logs.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="py-8 text-center text-gray-400 text-xs">No deposit or top-up records yet.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      acc.logs.forEach((log) => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-gray-50/80";
+        tr.innerHTML = `
+          <td class="py-3 px-5 font-mono text-gray-500 whitespace-nowrap">${log.timestamp}</td>
+          <td class="py-3 px-4 font-medium text-gray-900 whitespace-nowrap">${log.method}</td>
+          <td class="py-3 px-4 text-gray-500">${log.reference}</td>
+          <td class="py-3 px-4 text-right font-bold text-emerald-600 whitespace-nowrap">+${formatUSD(log.amount)}</td>
+          <td class="py-3 px-5 text-right whitespace-nowrap">
+            <span class="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-medium px-2 py-0.5 rounded-full">
+              ${log.status}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openTopupView(cardId) {
+      const acc = getActiveAccount();
+      activeTopupCardId = cardId || (acc.cards.length > 0 ? acc.cards[0].id : null);
+
+      const card = acc.cards.find((c) => c.id === activeTopupCardId);
+      const visualWrapper = document.getElementById("selected-card-visual-wrapper");
+      const infoBox = document.getElementById("additional-card-info-box");
+      const editBtn = document.getElementById("edit-card-trigger-btn");
+
+      if (card) {
+        visualWrapper.innerHTML = renderVccCardMarkup(card, acc.userBalance, false);
+        editBtn.classList.remove("hidden");
+        infoBox.classList.remove("hidden");
+        document.getElementById("info-country").textContent = card.country || "—";
+        document.getElementById("info-street").textContent = card.street || "—";
+        document.getElementById("info-city").textContent = card.city || "—";
+        document.getElementById("info-state-zip").textContent = [card.state, card.zip].filter(Boolean).join(" ") || "—";
+        document.getElementById("info-created").textContent = card.creationTime || "—";
+        document.getElementById("info-notes").textContent = card.notes || "—";
+      } else {
+        visualWrapper.innerHTML = `
+          <div class="bg-white border border-gray-200 rounded-2xl p-5 flex items-center justify-between">
+            <div>
+              <p class="text-xs text-gray-400">Target Account</p>
+              <p class="text-sm font-semibold text-gray-900">${currentUser} (User Balance)</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-gray-400">Current Balance</p>
+              <p class="text-lg font-bold text-emerald-600">${formatUSD(acc.userBalance)}</p>
+            </div>
+          </div>
+        `;
+        editBtn.classList.add("hidden");
+        infoBox.classList.add("hidden");
+      }
+
+      document.getElementById("cards-list-view").classList.add("hidden");
+      document.getElementById("card-detail-view").classList.add("hidden");
+      document.getElementById("card-topup-view").classList.remove("hidden");
+      switchTopupTab("crypto");
+    }
+
+    function setTopupAmount(val) {
+      document.getElementById("topup-amount").value = val.toFixed(2);
+    }
+
+    function switchTopupTab(tab) {
+      activeTopupTab = tab;
+      const cryptoBtn = document.getElementById("tab-crypto-btn");
+      const otherBtn = document.getElementById("tab-other-btn");
+      const panelCrypto = document.getElementById("panel-crypto");
+      const panelOther = document.getElementById("panel-other");
+
+      if (tab === "crypto") {
+        cryptoBtn.className = "py-3 text-xs sm:text-sm font-semibold text-[#007aff] border-b-2 border-[#007aff] bg-white transition cursor-pointer";
+        otherBtn.className = "py-3 text-xs sm:text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-800 transition cursor-pointer";
+        panelCrypto.classList.remove("hidden");
+        panelOther.classList.add("hidden");
+      } else {
+        otherBtn.className = "py-3 text-xs sm:text-sm font-semibold text-[#007aff] border-b-2 border-[#007aff] bg-white transition cursor-pointer";
+        cryptoBtn.className = "py-3 text-xs sm:text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-800 transition cursor-pointer";
+        panelOther.classList.remove("hidden");
+        panelCrypto.classList.add("hidden");
+      }
+    }
+
+    function selectCryptoNetwork(key, btnEl) {
+      selectedCryptoKey = key;
+      document.querySelectorAll(".crypto-net-btn").forEach((b) => {
+        b.className = "crypto-net-btn border border-gray-200 hover:border-gray-300 rounded-xl p-2.5 text-left cursor-pointer";
+      });
+      btnEl.className = "crypto-net-btn border-2 border-[#007aff] bg-blue-50/50 text-blue-900 rounded-xl p-2.5 text-left cursor-pointer";
+
+      const info = CRYPTO_NETWORKS[key];
+      document.getElementById("crypto-address-label").textContent = info.label;
+      document.getElementById("crypto-wallet-address").textContent = info.address;
+    }
+
+    function copyCryptoAddress() {
+      const addr = document.getElementById("crypto-wallet-address").textContent;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(addr);
+      }
+      showToast("Crypto wallet address copied");
+    }
+
+    function selectOtherMethod(methodName, btnEl) {
+      selectedOtherMethod = methodName;
+      document.querySelectorAll(".other-pay-btn").forEach((b) => {
+        b.className = "other-pay-btn border border-gray-200 hover:border-gray-300 rounded-xl p-3 text-left cursor-pointer";
+      });
+      btnEl.className = "other-pay-btn border-2 border-[#007aff] bg-blue-50/50 rounded-xl p-3 text-left cursor-pointer";
+      document.getElementById("other-selected-label").textContent = methodName;
+    }
+
+    function confirmTopup(category) {
+      const acc = getActiveAccount();
+      const amount = parseFloat(document.getElementById("topup-amount").value);
+      if (isNaN(amount) || amount <= 0) {
+        showToast("Please enter a valid USD amount");
+        return;
+      }
+
+      let methodLabel = "";
+      let refNote = "";
+
+      if (category === "Crypto") {
+        const netName = selectedCryptoKey.replace("_", " ");
+        const txid = document.getElementById("crypto-txid").value.trim();
+        methodLabel = `Crypto (${netName})`;
+        refNote = txid ? `TXID: ${txid}` : "Crypto Deposit Top-Up";
+        document.getElementById("crypto-txid").value = "";
+      } else {
+        const ref = document.getElementById("other-ref").value.trim();
+        methodLabel = selectedOtherMethod;
+        refNote = ref || "Other Payment Top-Up";
+        document.getElementById("other-ref").value = "";
+      }
+
+      acc.userBalance = +(acc.userBalance + amount).toFixed(2);
+
+      acc.logs.unshift({
+        id: "log_" + Date.now(),
+        timestamp: getTodayTimestamp(),
+        method: methodLabel,
+        reference: refNote,
+        amount: amount,
+        status: "Completed"
+      });
+
+      updateHeaderBalance();
+      showToast(`Top up +${formatUSD(amount)} added`);
+      showDashboardHome();
+    }
+
+    function handleCardNumberInput(input) {
+      let digits = input.value.replace(/\D/g, "").slice(0, 16);
+      input.value = digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+    }
+
+    function handleExpiryInput(input) {
+      let digits = input.value.replace(/\D/g, "").slice(0, 4);
+      if (digits.length >= 3) {
+        input.value = digits.slice(0, 2) + "/" + digits.slice(2);
+      } else {
+        input.value = digits;
+      }
+    }
+
+    function openAddCardView() {
+      const acc = getActiveAccount();
+      document.getElementById("edit-card-id").value = "";
+      document.getElementById("card-form").reset();
+      document.getElementById("card-label").value = "Vcc Card";
+      document.getElementById("card-balance").value = acc.userBalance.toFixed(2);
+      document.getElementById("card-created").value = getTodayTimestamp();
+      document.getElementById("form-error").classList.add("hidden");
+      document.getElementById("delete-card-wrapper").classList.add("hidden");
+      document.getElementById("detail-title").textContent = "Add Visa Card";
+      document.getElementById("card-number").disabled = false;
+
+      document.getElementById("cards-list-view").classList.add("hidden");
+      document.getElementById("card-topup-view").classList.add("hidden");
+      document.getElementById("card-detail-view").classList.remove("hidden");
+    }
+
+    function openEditSelectedCard() {
+      if (!activeTopupCardId) return;
+      openEditCardView(activeTopupCardId);
+    }
+
+    function openEditCardView(id) {
+      const acc = getActiveAccount();
+      const card = acc.cards.find((c) => c.id === id);
+      if (!card) return;
+
+      document.getElementById("edit-card-id").value = card.id;
+      document.getElementById("card-label").value = card.label || "Vcc Card";
+      document.getElementById("card-name").value = card.name;
+      document.getElementById("card-number").value = card.fullNumber;
+      document.getElementById("card-number").disabled = false;
+      document.getElementById("card-expiry").value = card.expiry;
+      document.getElementById("card-cvc").value = card.cvc;
+      document.getElementById("card-balance").value = acc.userBalance.toFixed(2);
+
+      document.getElementById("card-country").value = card.country || "";
+      document.getElementById("card-street").value = card.street || "";
+      document.getElementById("card-city").value = card.city || "";
+      document.getElementById("card-state").value = card.state || "";
+      document.getElementById("card-zip").value = card.zip || "";
+      document.getElementById("card-notes").value = card.notes || "";
+      document.getElementById("card-created").value = card.creationTime || "";
+
+      document.getElementById("form-error").classList.add("hidden");
+      document.getElementById("delete-card-wrapper").classList.remove("hidden");
+      document.getElementById("detail-title").textContent = "Edit Card Details";
+
+      document.getElementById("cards-list-view").classList.add("hidden");
+      document.getElementById("card-topup-view").classList.add("hidden");
+      document.getElementById("card-detail-view").classList.remove("hidden");
+    }
+
+    function saveCardForm() {
+      const acc = getActiveAccount();
+      const editId = document.getElementById("edit-card-id").value;
+      const label = document.getElementById("card-label").value.trim() || "Vcc Card";
+      const name = document.getElementById("card-name").value.trim();
+      const rawNumber = document.getElementById("card-number").value.replace(/\D/g, "");
+      const formattedNumber = rawNumber.replace(/(\d{4})(?=\d)/g, "$1 ");
+      const expiry = document.getElementById("card-expiry").value.trim();
+      const cvc = document.getElementById("card-cvc").value.trim();
+      const balanceVal = parseFloat(document.getElementById("card-balance").value);
+      const syncedBalance = isNaN(balanceVal) || balanceVal < 0 ? 0 : +balanceVal.toFixed(2);
+
+      const country = document.getElementById("card-country").value.trim();
+      const street = document.getElementById("card-street").value.trim();
+      const city = document.getElementById("card-city").value.trim();
+      const state = document.getElementById("card-state").value.trim();
+      const zip = document.getElementById("card-zip").value.trim();
+      const notes = document.getElementById("card-notes").value.trim();
+      const creationTime = document.getElementById("card-created").value.trim() || getTodayTimestamp();
+
+      const errorEl = document.getElementById("form-error");
+
+      if (!name) {
+        errorEl.textContent = "Cardholder name is required.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      if (rawNumber.length < 13 || !rawNumber.startsWith("4")) {
+        errorEl.textContent = "Please enter a valid Visa card number starting with 4.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry)) {
+        errorEl.textContent = "Enter Valid Thru date as MM/YY.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      if (!/^\d{3,4}$/.test(cvc)) {
+        errorEl.textContent = "CVV is required.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+
+      errorEl.classList.add("hidden");
+      acc.userBalance = syncedBalance;
+
+      if (editId) {
+        const idx = acc.cards.findIndex((c) => c.id === editId);
+        if (idx !== -1) {
+          acc.cards[idx] = {
+            ...acc.cards[idx],
+            label,
+            name,
+            fullNumber: formattedNumber,
+            last4: rawNumber.slice(-4),
+            expiry,
+            cvc,
+            country,
+            street,
+            city,
+            state,
+            zip,
+            notes,
+            creationTime
+          };
+        }
+      } else {
+        acc.cards.push({
+          id: "card_" + Date.now(),
+          label,
+          name,
+          fullNumber: formattedNumber,
+          last4: rawNumber.slice(-4),
+          expiry,
+          cvc,
+          country,
+          street,
+          city,
+          state,
+          zip,
+          notes,
+          creationTime
+        });
+      }
+
+      showToast("Card & synced balance saved");
+      showDashboardHome();
+    }
+
+    function deleteCurrentCard() {
+      const acc = getActiveAccount();
+      const editId = document.getElementById("edit-card-id").value;
+      if (!editId) return;
+      acc.cards = acc.cards.filter((c) => c.id !== editId);
+      showToast("Card removed");
+      showDashboardHome();
+    }
+  </script>
+</body>
+</html>
 
